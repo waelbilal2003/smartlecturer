@@ -5,31 +5,17 @@ plugins {
 }
 
 android {
-    namespace = "com.example.smartwael"
-    compileSdk = 34  // ✅ دعم Android 14
-    ndkVersion = flutter.ndkVersion
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
-    }
+    namespace = "com.example.smartlecturer"
+    compileSdk = 34
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.smartwael"
-        // ✅ إعدادات محدثة لدعم Android 14
-        minSdk = 21  // الحد الأدنى لدعم معظم الميزات
-        targetSdk = 34  // ✅ استهداف Android 14
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
-        
-        // ✅ تمكين requestLegacyExternalStorage للتوافق
-        manifestPlaceholders["requestLegacyExternalStorage"] = true
+        applicationId = "com.example.smartlecturer"
+        minSdk = 21
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
     }
+
     buildTypes {
         release {
             isMinifyEnabled = false
