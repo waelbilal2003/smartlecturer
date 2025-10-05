@@ -14,7 +14,8 @@ android {
         // التعيين الصحيح للـ minSdk و targetSdk في صيغة Kotlin DSL
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode.toInteger()
+        // السطر الصحيح
+        versionCode = flutter.versionCode.toInt()
         versionName = flutter.versionName
 
         // ✅ تمكين requestLegacyExternalStorage للتوافق
