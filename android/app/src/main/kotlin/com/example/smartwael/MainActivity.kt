@@ -1,10 +1,5 @@
 package com.example.smartwael
 
-<<<<<<< HEAD
-import io.flutter.embedding.android.FlutterActivity
-
-class MainActivity : FlutterActivity()
-=======
 import android.content.Intent
 import android.net.Uri
 import io.flutter.embedding.android.FlutterActivity

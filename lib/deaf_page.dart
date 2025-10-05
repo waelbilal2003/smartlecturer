@@ -11,10 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:vad/vad.dart';
-<<<<<<< HEAD
-=======
 import 'create_pdf.dart';
->>>>>>> temp-fixes
 
 class DeafPage extends StatefulWidget {
   const DeafPage({super.key});
@@ -276,15 +273,6 @@ class _DeafPageState extends State<DeafPage>
       _pulseAnimationController.stop();
       _voiceActivityController.reset();
       _volumeAnimationController.animateTo(0.0);
-<<<<<<< HEAD
-      debugPrint('🛑 إيقاف الاستماع المتواصل. القطع المعالجة: $_segmentCount');
-      _showSuccessSnackbar(
-        'تم إيقاف الاستماع - معالجة $_segmentCount قطعة صوتية',
-      );
-    } catch (e) {
-      debugPrint('❌ خطأ في إيقاف الاستماع: $e');
-      _showErrorSnackbar('خطأ في إيقاف الاستماع');
-=======
       debugPrint('🛑 تم إيقاف الاستماع. تمت معالجة $_segmentCount مقاطع');
       _showSuccessSnackbar('تم إيقاف الاستماع');
 
@@ -293,7 +281,6 @@ class _DeafPageState extends State<DeafPage>
     } catch (e) {
       debugPrint('❌ خطأ في إيقاف الاستماع: $e');
       _showErrorSnackbar('حدث خطأ أثناء الإيقاف');
->>>>>>> temp-fixes
     }
   }
 
@@ -365,13 +352,8 @@ class _DeafPageState extends State<DeafPage>
         await http.MultipartFile.fromPath('file', audioFile.path),
       );
       final response = await request.send().timeout(
-<<<<<<< HEAD
-        const Duration(seconds: 45),
-      );
-=======
             const Duration(seconds: 45),
           );
->>>>>>> temp-fixes
       final responseData = await response.stream.bytesToString();
       final processingTime = DateTime.now().millisecondsSinceEpoch - startTime;
       _totalProcessingTime += processingTime;
@@ -712,21 +694,6 @@ class _DeafPageState extends State<DeafPage>
   }
 
   Future<void> _pickAndSendFile() async {
-<<<<<<< HEAD
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.audio,
-        allowMultiple: false,
-      );
-      if (result != null && result.files.isNotEmpty) {
-        _showSuccessSnackbar('جاري معالجة الملف الصوتي...');
-        await Future.delayed(const Duration(seconds: 2));
-        _showSuccessSnackbar('تم معالجة الملف (محاكاة)');
-      }
-    } catch (e) {
-      debugPrint('❌ خطأ في اختيار الملف: $e');
-      _showErrorSnackbar('خطأ في اختيار الملف');
-=======
     // ✅ تحقق من وجود رابط API قبل البدء
     if (_apiUrl.isEmpty) {
       _showErrorSnackbar('يرجى إدخال رابط API في الإعدادات أولاً');
@@ -823,7 +790,6 @@ class _DeafPageState extends State<DeafPage>
       _showErrorSnackbar('حدث خطأ أثناء رفع الملف');
     } finally {
       if (mounted) setState(() => _isProcessing = false);
->>>>>>> temp-fixes
     }
   }
 
@@ -893,14 +859,8 @@ class _DeafPageState extends State<DeafPage>
     final micColor = !_microphonePermissionGranted
         ? Colors.grey
         : (_isListening
-<<<<<<< HEAD
-              ? (_inSpeechSegment ? Colors.green : Colors.orange)
-              : Colors.blue);
-=======
             ? (_inSpeechSegment ? Colors.green : Colors.orange)
             : Colors.blue);
->>>>>>> temp-fixes
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('المحاضر الذكي'),
@@ -948,13 +908,8 @@ class _DeafPageState extends State<DeafPage>
                         return Icon(
                           _isListening
                               ? (_inSpeechSegment
-<<<<<<< HEAD
-                                    ? Icons.record_voice_over
-                                    : Icons.hearing)
-=======
                                   ? Icons.record_voice_over
                                   : Icons.hearing)
->>>>>>> temp-fixes
                               : Icons.mic,
                           color: _voiceActivityColor.value ?? micColor,
                           size: 28,
@@ -1104,12 +1059,7 @@ class _DeafPageState extends State<DeafPage>
                         animation: _pulseAnimation,
                         builder: (context, child) {
                           return Transform.scale(
-<<<<<<< HEAD
-                            scale:
-                                _micScaleAnimation.value *
-=======
                             scale: _micScaleAnimation.value *
->>>>>>> temp-fixes
                                 (_isListening ? _pulseAnimation.value : 1.0),
                             child: Stack(
                               alignment: Alignment.center,
@@ -1119,17 +1069,9 @@ class _DeafPageState extends State<DeafPage>
                                     animation: _volumeLevelAnimation,
                                     builder: (context, child) {
                                       return Container(
-<<<<<<< HEAD
-                                        width:
-                                            100 +
-                                            (_volumeLevelAnimation.value * 40),
-                                        height:
-                                            100 +
-=======
                                         width: 100 +
                                             (_volumeLevelAnimation.value * 40),
                                         height: 100 +
->>>>>>> temp-fixes
                                             (_volumeLevelAnimation.value * 40),
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
