@@ -15,11 +15,12 @@ dependencies:
   shared_preferences: ^2.3.2
   file_picker: ^8.1.2
   flutter_launcher_icons: ^0.13.1
+  device_info_plus: ^10.1.2  # ✅ للحصول على معلومات النظام
 
   vad: ^0.0.6    
   pdf: ^3.10.7
-  printing: ^5.13.2 
-
+  printing: ^5.13.2
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

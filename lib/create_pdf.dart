@@ -6,6 +6,7 @@ import 'package:printing/printing.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart';
+import 'utils/permission_helper.dart';
 
 /// 🔹 هذه الدالة تقوم بإنشاء ملف PDF يحتوي على النصوص المحولة من الصوت.
 ///
@@ -21,9 +22,10 @@ Future<void> createTranscriptionPdf(
   }
 
   try {
-    // طلب إذن التخزين
-    if (await Permission.storage.request().isDenied) {
-      _showSnackbar(context, 'يجب منح إذن الوصول إلى التخزين', isError: true);
+    // ✅ طلب الأذونات المناسبة لإصدار Android
+    if (!await PermissionHelper.requestStoragePermissions(context)) {
+      _showSnackbar(context, 'يجب منح إذن الوصول إلى التخزين لحفظ ملف PDF',
+          isError: true);
       return;
     }
 
