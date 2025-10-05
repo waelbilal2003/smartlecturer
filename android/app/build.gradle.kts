@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.smartlecturer"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).

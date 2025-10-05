@@ -6,7 +6,7 @@ import 'package:printing/printing.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart';
-import 'utils/permission_helper.dart';
+import 'permission_helper.dart';
 
 /// 🔹 هذه الدالة تقوم بإنشاء ملف PDF يحتوي على النصوص المحولة من الصوت.
 ///
