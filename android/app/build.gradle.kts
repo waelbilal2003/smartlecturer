@@ -5,30 +5,35 @@ plugins {
 }
 
 android {
-    namespace = "com.example.smartlecturer"
+    namespace = "com.example.smartwael"
+    // ✅ الترقية إلى 36 كما هو مطلوب من الإضافات
     compileSdk = 36
+    ndkVersion = flutter.ndkVersion
+
+    // ✅✅ توحيد إصدار Java لكل من Java و Kotlin
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = '11'
+    }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.smartwael"
-        // التعيين الصحيح للـ minSdk و targetSdk في صيغة Kotlin DSL
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        // السطر الصحيح
         versionCode = flutter.versionCode.toInt()
         versionName = flutter.versionName
-
-        // ✅ تمكين requestLegacyExternalStorage للتوافق
-        manifestPlaceholders["requestLegacyExternalStorage"] = true
     }
+
     buildTypes {
         release {
-    // قم بتغيير هذا إلى true لتفعيل تصغير الكود
+            // ملاحظة: isMinifyEnabled و isShrinkResources يجب أن يكونا متطابقين
+            // إذا كان أحدهما true، يجب أن يكون الآخر true أيضًا.
             isMinifyEnabled = true
-
-    // الآن بما أن تصغير الكود مفعل، فإن هذا السطر (shrinkResources) سيصبح صالحًا
-    // قد يكون هذا السطر موجودًا بالفعل أو تحتاج لإضافته
-    // isShrinkResources = true // <--- إذا كان هذا هو السطر الذي يسبب المشكلة
+            isShrinkResources = true // تفعيل هذا أيضًا لحل مشكلة سابقة
 
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
