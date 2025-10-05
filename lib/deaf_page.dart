@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:vad/vad.dart';
+import 'create_pdf.dart';
 
 class DeafPage extends StatefulWidget {
   const DeafPage({super.key});
@@ -272,13 +273,14 @@ class _DeafPageState extends State<DeafPage>
       _pulseAnimationController.stop();
       _voiceActivityController.reset();
       _volumeAnimationController.animateTo(0.0);
-      debugPrint('🛑 إيقاف الاستماع المتواصل. القطع المعالجة: $_segmentCount');
-      _showSuccessSnackbar(
-        'تم إيقاف الاستماع - معالجة $_segmentCount قطعة صوتية',
-      );
+      debugPrint('🛑 تم إيقاف الاستماع. تمت معالجة $_segmentCount مقاطع');
+      _showSuccessSnackbar('تم إيقاف الاستماع');
+
+      // ✅ توليد PDF تلقائيًا بعد الإيقاف
+      await createTranscriptionPdf(context, _transcriptionHistory);
     } catch (e) {
       debugPrint('❌ خطأ في إيقاف الاستماع: $e');
-      _showErrorSnackbar('خطأ في إيقاف الاستماع');
+      _showErrorSnackbar('حدث خطأ أثناء الإيقاف');
     }
   }
 
@@ -692,90 +694,102 @@ class _DeafPageState extends State<DeafPage>
   }
 
   Future<void> _pickAndSendFile() async {
-    // التحقق من وجود رابط API قبل البدء
+    // ✅ تحقق من وجود رابط API قبل البدء
     if (_apiUrl.isEmpty) {
       _showErrorSnackbar('يرجى إدخال رابط API في الإعدادات أولاً');
       return;
     }
 
     try {
-      // 1. اختيار الملف الصوتي
+      // ✅ اختيار الملف من الصوت أو الفيديو
       final result = await FilePicker.platform.pickFiles(
-        type: FileType.audio,
+        type: FileType.custom,
+        allowedExtensions: [
+          'mp3',
+          'wav',
+          'm4a',
+          'flac',
+          'ogg',
+          'aac',
+          'amr',
+          'wma',
+          'aiff',
+          'mp4',
+          'mov',
+          'mkv',
+          'avi'
+        ],
         allowMultiple: false,
       );
 
-      if (result != null && result.files.single.path != null) {
-        setState(() => _isProcessing = true); // تفعيل مؤشر التحميل
-        _showSuccessSnackbar('جاري معالجة الملف الصوتي...');
+      if (result == null || result.files.single.path == null) {
+        _showErrorSnackbar('لم يتم اختيار أي ملف');
+        return;
+      }
 
-        final startTime = DateTime.now().millisecondsSinceEpoch;
-        final audioFile = File(result.files.single.path!);
-        debugPrint('📤 جاري إرسال الملف: ${audioFile.path}');
+      setState(() => _isProcessing = true);
+      _showSuccessSnackbar('📤 جاري رفع الملف...');
 
-        // 2. إعداد وإرسال الطلب (نفس منطق دالة الميكروفون)
-        try {
-          final uri = Uri.parse('$_apiUrl/stt');
-          final request = http.MultipartRequest('POST', uri);
-          request.files.add(
-            await http.MultipartFile.fromPath('file', audioFile.path),
-          );
+      final startTime = DateTime.now().millisecondsSinceEpoch;
+      final file = File(result.files.single.path!);
+      debugPrint('📂 تم اختيار الملف: ${file.path}');
 
-          final response = await request.send().timeout(
-              const Duration(seconds: 90)); // زيادة مهلة الوقت للملفات الكبيرة
-          final responseData = await response.stream.bytesToString();
-          final processingTime =
-              DateTime.now().millisecondsSinceEpoch - startTime;
+      // ✅ التحقق من الحجم (اختياري)
+      final fileSizeInMB = await file.length() / (1024 * 1024);
+      if (fileSizeInMB > 200) {
+        _showErrorSnackbar('⚠️ حجم الملف كبير جدًا (الحد الأقصى 200MB)');
+        setState(() => _isProcessing = false);
+        return;
+      }
 
-          // 3. معالجة الرد من الخادم
-          if (response.statusCode == 200) {
-            final json = jsonDecode(responseData);
-            final text = (json['text'] as String?) ?? '';
-            if (text.trim().isNotEmpty) {
-              _segmentCount++; // زيادة العداد
-              _transcriptionHistory.add(text);
-              if (mounted) {
-                setState(() {
-                  if (_textController.text.isNotEmpty) {
-                    _textController.text += '\n';
-                  }
-                  // إضافة علامة مميزة للنص القادم من ملف
-                  _textController.text += '[ملف-$_segmentCount] $text';
-                });
-                // التمرير لأسفل تلقائياً
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (_scrollController.hasClients) {
-                    _scrollController.animateTo(
-                      _scrollController.position.maxScrollExtent,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                    );
-                  }
-                });
-              }
-              debugPrint(
-                  '✅ النص المحول من الملف: ${text.substring(0, math.min(text.length, 50))}...');
-              _showSuccessSnackbar('تمت معالجة الملف بنجاح');
-            } else {
-              debugPrint('📝 نص فارغ من الملف');
-              _showErrorSnackbar('لم يتمكن الخادم من استخراج نص من الملف');
-            }
-          } else {
-            debugPrint('❌ خطأ في الخادم ${response.statusCode}: $responseData');
-            _showErrorSnackbar('خطأ في الخادم: ${response.statusCode}');
-          }
-        } catch (e) {
-          debugPrint('❌ خطأ في إرسال الملف: $e');
-          _showErrorSnackbar('حدث خطأ أثناء إرسال الملف');
-        } finally {
+      // ✅ إرسال الملف إلى API
+      final uri = Uri.parse('$_apiUrl/stt');
+      final request = http.MultipartRequest('POST', uri);
+      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+
+      final response =
+          await request.send().timeout(const Duration(seconds: 90));
+      final responseData = await response.stream.bytesToString();
+
+      final processingTime = DateTime.now().millisecondsSinceEpoch - startTime;
+      debugPrint('⏱️ مدة المعالجة: ${processingTime}ms');
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(responseData);
+        final text = (json['text'] as String?) ?? '';
+        if (text.trim().isNotEmpty) {
+          _segmentCount++;
+          _transcriptionHistory.add(text);
           if (mounted) {
-            setState(() => _isProcessing = false); // إيقاف مؤشر التحميل
+            setState(() {
+              if (_textController.text.isNotEmpty) {
+                _textController.text += '\n';
+              }
+              _textController.text += '[ملف-${_segmentCount}] $text';
+            });
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_scrollController.hasClients) {
+                _scrollController.animateTo(
+                  _scrollController.position.maxScrollExtent,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                );
+              }
+            });
           }
+          _showSuccessSnackbar('✅ تمت معالجة الملف بنجاح');
+        } else {
+          _showErrorSnackbar('📝 لم يتمكن الخادم من استخراج نص من الملف');
         }
+      } else {
+        _showErrorSnackbar('❌ خطأ في الخادم: ${response.statusCode}');
+        debugPrint('Server Error: ${response.statusCode} | $responseData');
       }
     } catch (e) {
-      debugPrint('❌ خطأ في اختيار الملف: $e');
-      _showErrorSnackbar('خطأ في اختيار الملف');
+      debugPrint('❌ خطأ أثناء رفع الملف: $e');
+      _showErrorSnackbar('حدث خطأ أثناء رفع الملف');
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 

@@ -3,14 +3,15 @@
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 <uses-permission android:name="android.permission.CAMERA"/>
 <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-<!--  لو تستخدم Foreground Service للتسجيل (بعض إضافات الصوت تعمل كذا)  -->
+
+<!-- لتشغيل خدمات الخلفية (مثل تسجيل الصوت) -->
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
-<!--  1. الإذن الجديد لإصدارات أندرويد 13 فما فوق  -->
-<!--  هذا الإذن ضروري ليعمل التطبيق على الأنظمة الحديثة  -->
+
+<!-- أذونات الصوت لأندرويد 13+ -->
 <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
-<!--  2. الإذن القديم للإصدارات 12 وما قبل  -->
-<!--  maxSdkVersion="32" تضمن عدم طلب هذا الإذن على أندرويد 13+  -->
+
+<!-- الوصول للملفات على أندرويد 12 وأقل -->
 <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
 <!--  3. لم تعد هناك حاجة لـ WRITE_EXTERNAL_STORAGE  -->
 <!--  يمكنك حذفه بأمان. مكتبة file_picker لا تحتاجه لاختيار الملفات.  -->
