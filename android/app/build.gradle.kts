@@ -9,13 +9,17 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.smartlecturer"
-        minSdk = 21
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
-    }
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        applicationId = "com.example.smartwael"
+        // التعيين الصحيح للـ minSdk و targetSdk في صيغة Kotlin DSL
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode.toInteger()
+        versionName = flutter.versionName
 
+        // ✅ تمكين requestLegacyExternalStorage للتوافق
+        manifestPlaceholders["requestLegacyExternalStorage"] = true
+    }
     buildTypes {
         release {
             isMinifyEnabled = false
