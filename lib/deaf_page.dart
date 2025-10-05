@@ -11,6 +11,10 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:vad/vad.dart';
+<<<<<<< HEAD
+=======
+import 'create_pdf.dart';
+>>>>>>> temp-fixes
 
 class DeafPage extends StatefulWidget {
   const DeafPage({super.key});
@@ -272,6 +276,7 @@ class _DeafPageState extends State<DeafPage>
       _pulseAnimationController.stop();
       _voiceActivityController.reset();
       _volumeAnimationController.animateTo(0.0);
+<<<<<<< HEAD
       debugPrint('🛑 إيقاف الاستماع المتواصل. القطع المعالجة: $_segmentCount');
       _showSuccessSnackbar(
         'تم إيقاف الاستماع - معالجة $_segmentCount قطعة صوتية',
@@ -279,6 +284,16 @@ class _DeafPageState extends State<DeafPage>
     } catch (e) {
       debugPrint('❌ خطأ في إيقاف الاستماع: $e');
       _showErrorSnackbar('خطأ في إيقاف الاستماع');
+=======
+      debugPrint('🛑 تم إيقاف الاستماع. تمت معالجة $_segmentCount مقاطع');
+      _showSuccessSnackbar('تم إيقاف الاستماع');
+
+      // ✅ توليد PDF تلقائيًا بعد الإيقاف
+      await createTranscriptionPdf(context, _transcriptionHistory);
+    } catch (e) {
+      debugPrint('❌ خطأ في إيقاف الاستماع: $e');
+      _showErrorSnackbar('حدث خطأ أثناء الإيقاف');
+>>>>>>> temp-fixes
     }
   }
 
@@ -350,8 +365,13 @@ class _DeafPageState extends State<DeafPage>
         await http.MultipartFile.fromPath('file', audioFile.path),
       );
       final response = await request.send().timeout(
+<<<<<<< HEAD
         const Duration(seconds: 45),
       );
+=======
+            const Duration(seconds: 45),
+          );
+>>>>>>> temp-fixes
       final responseData = await response.stream.bytesToString();
       final processingTime = DateTime.now().millisecondsSinceEpoch - startTime;
       _totalProcessingTime += processingTime;
@@ -692,6 +712,7 @@ class _DeafPageState extends State<DeafPage>
   }
 
   Future<void> _pickAndSendFile() async {
+<<<<<<< HEAD
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.audio,
@@ -705,6 +726,104 @@ class _DeafPageState extends State<DeafPage>
     } catch (e) {
       debugPrint('❌ خطأ في اختيار الملف: $e');
       _showErrorSnackbar('خطأ في اختيار الملف');
+=======
+    // ✅ تحقق من وجود رابط API قبل البدء
+    if (_apiUrl.isEmpty) {
+      _showErrorSnackbar('يرجى إدخال رابط API في الإعدادات أولاً');
+      return;
+    }
+
+    try {
+      // ✅ اختيار الملف من الصوت أو الفيديو
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [
+          'mp3',
+          'wav',
+          'm4a',
+          'flac',
+          'ogg',
+          'aac',
+          'amr',
+          'wma',
+          'aiff',
+          'mp4',
+          'mov',
+          'mkv',
+          'avi'
+        ],
+        allowMultiple: false,
+      );
+
+      if (result == null || result.files.single.path == null) {
+        _showErrorSnackbar('لم يتم اختيار أي ملف');
+        return;
+      }
+
+      setState(() => _isProcessing = true);
+      _showSuccessSnackbar('📤 جاري رفع الملف...');
+
+      final startTime = DateTime.now().millisecondsSinceEpoch;
+      final file = File(result.files.single.path!);
+      debugPrint('📂 تم اختيار الملف: ${file.path}');
+
+      // ✅ التحقق من الحجم (اختياري)
+      final fileSizeInMB = await file.length() / (1024 * 1024);
+      if (fileSizeInMB > 200) {
+        _showErrorSnackbar('⚠️ حجم الملف كبير جدًا (الحد الأقصى 200MB)');
+        setState(() => _isProcessing = false);
+        return;
+      }
+
+      // ✅ إرسال الملف إلى API
+      final uri = Uri.parse('$_apiUrl/stt');
+      final request = http.MultipartRequest('POST', uri);
+      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+
+      final response =
+          await request.send().timeout(const Duration(seconds: 90));
+      final responseData = await response.stream.bytesToString();
+
+      final processingTime = DateTime.now().millisecondsSinceEpoch - startTime;
+      debugPrint('⏱️ مدة المعالجة: ${processingTime}ms');
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(responseData);
+        final text = (json['text'] as String?) ?? '';
+        if (text.trim().isNotEmpty) {
+          _segmentCount++;
+          _transcriptionHistory.add(text);
+          if (mounted) {
+            setState(() {
+              if (_textController.text.isNotEmpty) {
+                _textController.text += '\n';
+              }
+              _textController.text += '[ملف-${_segmentCount}] $text';
+            });
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_scrollController.hasClients) {
+                _scrollController.animateTo(
+                  _scrollController.position.maxScrollExtent,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                );
+              }
+            });
+          }
+          _showSuccessSnackbar('✅ تمت معالجة الملف بنجاح');
+        } else {
+          _showErrorSnackbar('📝 لم يتمكن الخادم من استخراج نص من الملف');
+        }
+      } else {
+        _showErrorSnackbar('❌ خطأ في الخادم: ${response.statusCode}');
+        debugPrint('Server Error: ${response.statusCode} | $responseData');
+      }
+    } catch (e) {
+      debugPrint('❌ خطأ أثناء رفع الملف: $e');
+      _showErrorSnackbar('حدث خطأ أثناء رفع الملف');
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+>>>>>>> temp-fixes
     }
   }
 
@@ -774,8 +893,13 @@ class _DeafPageState extends State<DeafPage>
     final micColor = !_microphonePermissionGranted
         ? Colors.grey
         : (_isListening
+<<<<<<< HEAD
               ? (_inSpeechSegment ? Colors.green : Colors.orange)
               : Colors.blue);
+=======
+            ? (_inSpeechSegment ? Colors.green : Colors.orange)
+            : Colors.blue);
+>>>>>>> temp-fixes
 
     return Scaffold(
       appBar: AppBar(
@@ -824,8 +948,13 @@ class _DeafPageState extends State<DeafPage>
                         return Icon(
                           _isListening
                               ? (_inSpeechSegment
+<<<<<<< HEAD
                                     ? Icons.record_voice_over
                                     : Icons.hearing)
+=======
+                                  ? Icons.record_voice_over
+                                  : Icons.hearing)
+>>>>>>> temp-fixes
                               : Icons.mic,
                           color: _voiceActivityColor.value ?? micColor,
                           size: 28,
@@ -975,8 +1104,12 @@ class _DeafPageState extends State<DeafPage>
                         animation: _pulseAnimation,
                         builder: (context, child) {
                           return Transform.scale(
+<<<<<<< HEAD
                             scale:
                                 _micScaleAnimation.value *
+=======
+                            scale: _micScaleAnimation.value *
+>>>>>>> temp-fixes
                                 (_isListening ? _pulseAnimation.value : 1.0),
                             child: Stack(
                               alignment: Alignment.center,
@@ -986,11 +1119,17 @@ class _DeafPageState extends State<DeafPage>
                                     animation: _volumeLevelAnimation,
                                     builder: (context, child) {
                                       return Container(
+<<<<<<< HEAD
                                         width:
                                             100 +
                                             (_volumeLevelAnimation.value * 40),
                                         height:
                                             100 +
+=======
+                                        width: 100 +
+                                            (_volumeLevelAnimation.value * 40),
+                                        height: 100 +
+>>>>>>> temp-fixes
                                             (_volumeLevelAnimation.value * 40),
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
