@@ -23,7 +23,13 @@ android {
     }
     buildTypes {
         release {
-            isMinifyEnabled = false
+    // قم بتغيير هذا إلى true لتفعيل تصغير الكود
+            isMinifyEnabled = true
+
+    // الآن بما أن تصغير الكود مفعل، فإن هذا السطر (shrinkResources) سيصبح صالحًا
+    // قد يكون هذا السطر موجودًا بالفعل أو تحتاج لإضافته
+    // isShrinkResources = true // <--- إذا كان هذا هو السطر الذي يسبب المشكلة
+
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
