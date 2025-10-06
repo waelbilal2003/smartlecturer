@@ -6,8 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.smartwael"
-    // ✅ استخدام إصدار مستقر (34) بدلاً من 36
-    compileSdk = 34
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     // ✅✅ توحيد إصدار Java لكل من Java و Kotlin
