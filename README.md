@@ -1,30 +1,41 @@
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-# smartlecturer
-smart lecturer
-=======
->>>>>>> temp-fixes
-# sywa_bot
+# تطبيق المحاضر الذكي - Special Needs App
 
-A new Flutter project created with FlutLab - https://flutlab.io
+تطبيق لذوي الاحتياجات الخاصة (إعاقة سمعية وبصرية)
 
-## Getting Started
+## وصف المشروع
 
-A few resources to get you started if this is your first Flutter project:
+تطبيق Flutter يهدف لمساعدة ذوي الاحتياجات الخاصة من خلال توفير أدوات مساعدة للإعاقة السمعية والبصرية.
 
-- https://flutter.dev/docs/get-started/codelab
-- https://flutter.dev/docs/cookbook
+## الميزات
 
-For help getting started with Flutter, view our
-https://flutter.dev/docs, which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- دعم للإعاقة السمعية والبصرية
+- واجهة سهلة الاستخدام
+- إمكانيات تحويل النص والصوت
+- دعم ملفات PDF
 
-## Getting Started: FlutLab - Flutter Online IDE
+## متطلبات التشغيل
 
-- How to use FlutLab? Please, view our https://flutlab.io/docs
-- Join the discussion and conversation on https://flutlab.io/residents
-<<<<<<< HEAD
-=======
->>>>>>> d906f1c (first commit)
->>>>>>> temp-fixes
+- Flutter SDK
+- Android SDK (API 21+)
+- Gradle 8.x
+
+## التثبيت والتشغيل
+
+```bash
+flutter clean
+flutter pub get
+flutter build apk --release
+```
+
+## إصلاح مشاكل APK
+
+إذا واجهتك مشكلة "الحزمة تبدو غير صالحة":
+
+1. تأكد من أن compileSdk = 34 (وليس 36)
+2. تعطيل minifyEnabled مؤقتاً
+3. تنظيف مجلد build
+4. إعادة البناء
+
+## الدعم
+
+للمساعدة أو الإبلاغ عن مشاكل، يرجى فتح issue في المستودع.
