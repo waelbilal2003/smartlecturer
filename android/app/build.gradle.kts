@@ -6,8 +6,8 @@ plugins {
 
 android {
     namespace = "com.example.smartwael"
-    // ✅ الترقية إلى 36 كما هو مطلوب من الإضافات
-    compileSdk = 36
+    // ✅ استخدام إصدار مستقر (34) بدلاً من 36
+    compileSdk = 34
     ndkVersion = flutter.ndkVersion
 
     // ✅✅ توحيد إصدار Java لكل من Java و Kotlin
@@ -30,10 +30,9 @@ android {
 
     buildTypes {
         release {
-            // ملاحظة: isMinifyEnabled و isShrinkResources يجب أن يكونا متطابقين
-            // إذا كان أحدهما true، يجب أن يكون الآخر true أيضًا.
-            isMinifyEnabled = true
-            isShrinkResources = true // تفعيل هذا أيضًا لحل مشكلة سابقة
+             // تعطيل التشفير مؤقتاً لحل مشكلة التثبيت
+            isMinifyEnabled = false
+            isShrinkResources = false
 
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
