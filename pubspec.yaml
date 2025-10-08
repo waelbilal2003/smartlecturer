@@ -20,6 +20,7 @@ dependencies:
   vad: ^0.0.6    
   pdf: ^3.10.7
   printing: ^5.13.2
+  google_fonts: ^6.2.1
   
 dev_dependencies:
   flutter_test:
@@ -30,6 +31,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/logo.png
+    - assets/fonts/
 
 # 👇 قسم أيقونة التطبيق
 flutter_launcher_icons:

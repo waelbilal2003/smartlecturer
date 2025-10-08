@@ -58,7 +58,6 @@ class _SplashPageState extends State<SplashPage> {
       // قائمة الأذونات المطلوبة
       List<Permission> permissions = [
         Permission.microphone, // لتسجيل الصوت
-        Permission.camera, // للكاميرا
         Permission.storage, // للإصدارات الأقدم
         Permission.manageExternalStorage, // Android 11+
         Permission.photos, // Android 13+ للصور

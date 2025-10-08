@@ -276,8 +276,8 @@ class _DeafPageState extends State<DeafPage>
       debugPrint('🛑 تم إيقاف الاستماع. تمت معالجة $_segmentCount مقاطع');
       _showSuccessSnackbar('تم إيقاف الاستماع');
 
-      // ✅ توليد PDF تلقائيًا بعد الإيقاف
-      await createTranscriptionPdf(context, _transcriptionHistory);
+      // ✅ توليد PDF تلقائيًا بعد الإيقاف (بدون مشاركة)
+      await createTranscriptionPdf(context, _transcriptionHistory, autoDownload: true);
     } catch (e) {
       debugPrint('❌ خطأ في إيقاف الاستماع: $e');
       _showErrorSnackbar('حدث خطأ أثناء الإيقاف');
@@ -815,6 +815,64 @@ class _DeafPageState extends State<DeafPage>
     );
   }
 
+  /// 📥 تحميل PDF مباشرة إلى الهاتف بدون مشاركة
+  Future<void> _downloadPdfDirectly() async {
+    if (_transcriptionHistory.isEmpty) {
+      _showErrorSnackbar('لا يوجد نصوص لتحويلها إلى PDF');
+      return;
+    }
+    await createTranscriptionPdf(context, _transcriptionHistory, autoDownload: true);
+  }
+
+  /// 📤 مشاركة PDF 
+  Future<void> _sharePdf() async {
+    if (_transcriptionHistory.isEmpty) {
+      _showErrorSnackbar('لا يوجد نصوص لتحويلها إلى PDF');
+      return;
+    }
+    await createTranscriptionPdf(context, _transcriptionHistory, autoDownload: false);
+  }
+
+  /// 🗑️ إظهار تأكيد حذف النصوص
+  void _showDeleteConfirmation() {
+    if (_transcriptionHistory.isEmpty) {
+      _showErrorSnackbar('لا يوجد نصوص لحذفها');
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'تأكيد الحذف',
+          style: TextStyle(fontWeight: FontWeight.bold),
+          textDirection: TextDirection.rtl,
+        ),
+        content: const Text(
+          'هل أنت متأكد من رغبتك في حذف جميع النصوص المحولة؟\n\nلن تتمكن من استرداد هذه النصوص بعد الحذف.',
+          textDirection: TextDirection.rtl,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _clearText();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _clearText() {
     setState(() {
       _textController.clear();
@@ -822,6 +880,7 @@ class _DeafPageState extends State<DeafPage>
       _segmentCount = 0;
       _volumeHistory.clear();
     });
+    _showSuccessSnackbar('تم مسح جميع النصوص');
   }
 
   @override
@@ -865,6 +924,35 @@ class _DeafPageState extends State<DeafPage>
       appBar: AppBar(
         title: const Text('المحاضر الذكي'),
         backgroundColor: micColor.withOpacity(0.1),
+        leading: PopupMenuButton<String>(
+          icon: const Icon(Icons.download, size: 28),
+          tooltip: 'تحميل PDF',
+          onSelected: (String result) async {
+            if (result == 'download') {
+              await _downloadPdfDirectly();
+            } else if (result == 'share') {
+              await _sharePdf();
+            }
+          },
+          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+            const PopupMenuItem<String>(
+              value: 'download',
+              child: ListTile(
+                leading: Icon(Icons.download, color: Colors.blue),
+                title: Text('تحميل الملف', textDirection: TextDirection.rtl),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+            const PopupMenuItem<String>(
+              value: 'share',
+              child: ListTile(
+                leading: Icon(Icons.share, color: Colors.green),
+                title: Text('مشاركة', textDirection: TextDirection.rtl),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -879,7 +967,7 @@ class _DeafPageState extends State<DeafPage>
           IconButton(
             icon: const Icon(Icons.delete),
             color: Colors.red,
-            onPressed: _clearText,
+            onPressed: _showDeleteConfirmation,
             tooltip: 'مسح النص',
           ),
         ],

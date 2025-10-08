@@ -12,10 +12,12 @@ import 'permission_helper.dart';
 ///
 /// [transcriptionHistory] قائمة بالنصوص (مع الطوابع الزمنية)
 /// [context] لعرض Snackbars (اختياري)
+/// [autoDownload] إذا كان true سيحفظ الملف تلقائياً، وإلا سيظهر خيارات (مشاركة/تحميل)
 Future<void> createTranscriptionPdf(
   BuildContext context,
-  List<String> transcriptionHistory,
-) async {
+  List<String> transcriptionHistory, {
+  bool autoDownload = false,
+}) async {
   if (transcriptionHistory.isEmpty) {
     _showSnackbar(context, 'لا يوجد نصوص لتحويلها إلى PDF', isError: true);
     return;
@@ -37,6 +39,9 @@ Future<void> createTranscriptionPdf(
         "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} "
         "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
 
+    // ✅ تحميل خط عربي للـ PDF
+    final arabicFont = await PdfGoogleFonts.notoSansArabicRegular();
+
     // إنشاء محتوى المستند
     pdf.addPage(
       pw.MultiPage(
@@ -49,6 +54,7 @@ Future<void> createTranscriptionPdf(
               style: pw.TextStyle(
                 fontSize: 22,
                 fontWeight: pw.FontWeight.bold,
+                font: arabicFont,
               ),
               textDirection: pw.TextDirection.rtl,
             ),
@@ -56,7 +62,7 @@ Future<void> createTranscriptionPdf(
           pw.SizedBox(height: 8),
           pw.Text(
             'تاريخ الإنشاء: $formattedDate',
-            style: pw.TextStyle(fontSize: 12),
+            style: pw.TextStyle(fontSize: 12, font: arabicFont),
             textDirection: pw.TextDirection.rtl,
           ),
           pw.Divider(),
@@ -80,13 +86,20 @@ Future<void> createTranscriptionPdf(
                   if (timestamp.isNotEmpty)
                     pw.Text(
                       "⏱️ $timestamp",
-                      style:
-                          pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
+                      style: pw.TextStyle(
+                          fontSize: 10, 
+                          color: PdfColors.grey600, 
+                          font: arabicFont
+                      ),
                       textDirection: pw.TextDirection.rtl,
                     ),
                   pw.Text(
                     text,
-                    style: pw.TextStyle(fontSize: 14, height: 1.5),
+                    style: pw.TextStyle(
+                        fontSize: 14, 
+                        height: 1.5, 
+                        font: arabicFont
+                    ),
                     textDirection: pw.TextDirection.rtl,
                   ),
                   pw.Divider(thickness: 0.3),
@@ -122,11 +135,14 @@ Future<void> createTranscriptionPdf(
     }
     _showSnackbar(context, '✅ تم حفظ ملف PDF في مجلد التنزيلات بنجاح');
 
-    // (اختياري) عرض نافذة المشاركة
-    await Printing.sharePdf(
-      bytes: await pdf.save(),
-      filename: "Transcription.pdf",
-    );
+    // ✅ إذا كان autoDownload = true، لا تظهر نافذة المشاركة، فقط احفظ
+    if (!autoDownload) {
+      // عرض نافذة المشاركة عند الحاجة
+      await Printing.sharePdf(
+        bytes: await pdf.save(),
+        filename: "Transcription.pdf",
+      );
+    }
   } catch (e) {
     debugPrint('❌ خطأ أثناء إنشاء PDF: $e');
     _showSnackbar(context, 'حدث خطأ أثناء إنشاء ملف PDF', isError: true);
