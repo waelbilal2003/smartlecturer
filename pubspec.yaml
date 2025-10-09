@@ -16,6 +16,9 @@ dependencies:
   file_picker: ^8.1.2
   flutter_launcher_icons: ^0.13.1
   device_info_plus: ^10.1.2  # ✅ للحصول على معلومات النظام
+  open_filex: ^4.4.0  # ✅ لفتح الملفات المحفوظة
+  sqflite: ^2.3.0  # ✅ قاعدة بيانات محلية لتتبع الملفات
+  intl: ^0.19.0  # ✅ لتنسيق التواريخ والأرقام
 
   vad: ^0.0.6    
   pdf: ^3.10.7

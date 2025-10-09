@@ -7,31 +7,36 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart';
 import 'permission_helper.dart';
+import 'services/local_storage_manager.dart';
 
 /// 🔹 هذه الدالة تقوم بإنشاء ملف PDF يحتوي على النصوص المحولة من الصوت.
 ///
 /// [transcriptionHistory] قائمة بالنصوص (مع الطوابع الزمنية)
 /// [context] لعرض Snackbars (اختياري)
-/// [autoDownload] إذا كان true سيحفظ الملف تلقائياً، وإلا سيظهر خيارات (مشاركة/تحميل)
-Future<void> createTranscriptionPdf(
+/// [saveLocation] مكان حفظ الملف (افتراضياً مجلد التطبيق)
+/// [showShareDialog] إذا كان true سيظهر خيارات المشاركة بعد الحفظ
+Future<SavedFileResult?> createTranscriptionPdf(
   BuildContext context,
   List<String> transcriptionHistory, {
-  bool autoDownload = false,
+  SaveLocation saveLocation = SaveLocation.appDocuments,
+  bool showShareDialog = false,
 }) async {
   if (transcriptionHistory.isEmpty) {
     _showSnackbar(context, 'لا يوجد نصوص لتحويلها إلى PDF', isError: true);
-    return;
+    return null;
   }
 
   try {
-    // ✅ طلب الأذونات المناسبة لإصدار Android
-    if (!await PermissionHelper.requestStoragePermissions(context)) {
-      _showSnackbar(context, 'يجب منح إذن الوصول إلى التخزين لحفظ ملف PDF',
-          isError: true);
-      return;
+    // ✅ طلب الأذونات المناسبة لإصدار Android (فقط للحفظ الخارجي)
+    if (saveLocation != SaveLocation.appDocuments) {
+      if (!await PermissionHelper.requestStoragePermissions(context)) {
+        _showSnackbar(context, 'يجب منح إذن الوصول إلى التخزين للحفظ في هذا الموقع',
+            isError: true);
+        return null;
+      }
     }
 
-    _showSnackbar(context, '📄 جاري إنشاء ملف PDF...');
+    _showSnackbar(context, '📄 جاري إنشاء وحفظ ملف PDF...');
 
     final pdf = pw.Document();
     final now = DateTime.now();
@@ -111,41 +116,43 @@ Future<void> createTranscriptionPdf(
       ),
     );
 
-    // 🔹 تحديد مجلد الحفظ (Downloads)
-    final List<Directory>? dirs =
-        await getExternalStorageDirectories(type: StorageDirectory.downloads);
-    Directory downloadDir = dirs != null && dirs.isNotEmpty
-        ? dirs.first
-        : await getApplicationDocumentsDirectory();
+    // 🔹 حفظ الملف باستخدام مدير التخزين المحلي المحسن
+    final pdfBytes = await pdf.save();
+    final result = await LocalStorageManager.savePdfFile(
+      pdfBytes: pdfBytes,
+      fileName: 'تقرير_الجلسة_الصوتية',
+      description: 'تقرير يحتوي على ${transcriptionHistory.length} نص محول من الصوت - $formattedDate',
+      saveLocation: saveLocation,
+    );
 
-// 🔹 إنشاء اسم الملف
-    final filePath =
-        "${downloadDir.path}/Transcription_${now.millisecondsSinceEpoch}.pdf";
+    if (result.success) {
+      _showSnackbar(context, result.message);
+      
+      // ✅ إعلام نظام أندرويد بأن هناك ملفًا جديدًا (للحفظ الخارجي فقط)
+      if (saveLocation != SaveLocation.appDocuments && result.filePath != null) {
+        try {
+          const platform = MethodChannel('media_scanner');
+          await platform.invokeMethod('scanFile', {'path': result.filePath});
+          debugPrint('📂 تمت فهرسة الملف ليظهر في تطبيق الملفات');
+        } catch (e) {
+          debugPrint('⚠️ فشل إرسال إشعار MediaScanner: $e');
+        }
+      }
 
-// 🔹 حفظ الملف
-    final file = File(filePath);
-    await file.writeAsBytes(await pdf.save());
-    // ✅ إعلام نظام أندرويد بأن هناك ملفًا جديدًا ليظهر في تطبيق الملفات
-    try {
-      const platform = MethodChannel('media_scanner');
-      await platform.invokeMethod('scanFile', {'path': filePath});
-      debugPrint('📂 تمت فهرسة الملف ليظهر في تطبيق الملفات');
-    } catch (e) {
-      debugPrint('⚠️ فشل إرسال إشعار MediaScanner: $e');
-    }
-    _showSnackbar(context, '✅ تم حفظ ملف PDF في مجلد التنزيلات بنجاح');
-
-    // ✅ إذا كان autoDownload = true، لا تظهر نافذة المشاركة، فقط احفظ
-    if (!autoDownload) {
-      // عرض نافذة المشاركة عند الحاجة
-      await Printing.sharePdf(
-        bytes: await pdf.save(),
-        filename: "Transcription.pdf",
-      );
+      // ✅ عرض خيارات إضافية للمستخدم
+      if (showShareDialog) {
+        await _showFileActionsDialog(context, result, pdfBytes);
+      }
+      
+      return result;
+    } else {
+      _showSnackbar(context, result.message, isError: true);
+      return null;
     }
   } catch (e) {
     debugPrint('❌ خطأ أثناء إنشاء PDF: $e');
-    _showSnackbar(context, 'حدث خطأ أثناء إنشاء ملف PDF', isError: true);
+    _showSnackbar(context, 'حدث خطأ أثناء إنشاء ملف PDF: ${e.toString()}', isError: true);
+    return null;
   }
 }
 
@@ -156,6 +163,191 @@ void _showSnackbar(BuildContext context, String message,
     SnackBar(
       content: Text(message, textDirection: TextDirection.rtl),
       backgroundColor: isError ? Colors.redAccent : Colors.green,
+      duration: Duration(seconds: isError ? 4 : 3),
     ),
+  );
+}
+
+/// 🔸 عرض حوار خيارات الملف بعد الحفظ
+Future<void> _showFileActionsDialog(
+  BuildContext context, 
+  SavedFileResult result, 
+  List<int> pdfBytes
+) async {
+  return showDialog<void>(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text(
+          'تم حفظ الملف بنجاح ✅',
+          textDirection: TextDirection.rtl,
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'اسم الملف: ${result.fileName}',
+              textDirection: TextDirection.rtl,
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'الحجم: ${result.fileInfo?.formattedSize ?? 'غير معروف'}',
+              textDirection: TextDirection.rtl,
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'ماذا تريد أن تفعل الآن؟',
+              textDirection: TextDirection.rtl,
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إغلاق'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              if (result.fileInfo != null) {
+                final opened = await LocalStorageManager.openSavedFile(result.fileInfo!);
+                if (!opened && context.mounted) {
+                  _showSnackbar(context, 'لا يمكن فتح الملف. تأكد من وجود تطبيق لقراءة PDF', isError: true);
+                }
+              }
+            },
+            icon: const Icon(Icons.open_in_new),
+            label: const Text('فتح الملف'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              try {
+                await Printing.sharePdf(
+                  bytes: pdfBytes,
+                  filename: result.fileName ?? "تقرير_صوتي.pdf",
+                );
+              } catch (e) {
+                if (context.mounted) {
+                  _showSnackbar(context, 'خطأ في مشاركة الملف: $e', isError: true);
+                }
+              }
+            },
+            icon: const Icon(Icons.share),
+            label: const Text('مشاركة'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+/// 🔸 دالة سريعة لحفظ PDF في مجلد التطبيق (بدون أذونات)
+Future<SavedFileResult?> createAndSaveTranscriptionPdfQuick(
+  BuildContext context,
+  List<String> transcriptionHistory,
+) async {
+  return await createTranscriptionPdf(
+    context,
+    transcriptionHistory,
+    saveLocation: SaveLocation.appDocuments,
+    showShareDialog: true,
+  );
+}
+
+/// 🔸 دالة لحفظ PDF مع خيار المكان
+Future<void> showSaveLocationDialog(
+  BuildContext context,
+  List<String> transcriptionHistory,
+) async {
+  return showDialog<void>(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text(
+          'اختر مكان حفظ الملف',
+          textDirection: TextDirection.rtl,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.folder, color: Colors.blue),
+              title: const Text(
+                'مجلد التطبيق (موصى به)',
+                textDirection: TextDirection.rtl,
+              ),
+              subtitle: const Text(
+                'سريع ولا يحتاج أذونات خاصة',
+                textDirection: TextDirection.rtl,
+                style: TextStyle(fontSize: 12),
+              ),
+              onTap: () async {
+                Navigator.of(context).pop();
+                await createTranscriptionPdf(
+                  context,
+                  transcriptionHistory,
+                  saveLocation: SaveLocation.appDocuments,
+                  showShareDialog: true,
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.download, color: Colors.green),
+              title: const Text(
+                'مجلد التنزيلات',
+                textDirection: TextDirection.rtl,
+              ),
+              subtitle: const Text(
+                'يحتاج أذونات، ويظهر في تطبيق الملفات',
+                textDirection: TextDirection.rtl,
+                style: TextStyle(fontSize: 12),
+              ),
+              onTap: () async {
+                Navigator.of(context).pop();
+                await createTranscriptionPdf(
+                  context,
+                  transcriptionHistory,
+                  saveLocation: SaveLocation.downloads,
+                  showShareDialog: true,
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.description, color: Colors.orange),
+              title: const Text(
+                'المستندات الخارجية',
+                textDirection: TextDirection.rtl,
+              ),
+              subtitle: const Text(
+                'للتنظيم مع ملفات أخرى',
+                textDirection: TextDirection.rtl,
+                style: TextStyle(fontSize: 12),
+              ),
+              onTap: () async {
+                Navigator.of(context).pop();
+                await createTranscriptionPdf(
+                  context,
+                  transcriptionHistory,
+                  saveLocation: SaveLocation.externalDocuments,
+                  showShareDialog: true,
+                );
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إلغاء'),
+          ),
+        ],
+      );
+    },
   );
 }

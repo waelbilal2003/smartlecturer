@@ -12,6 +12,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:vad/vad.dart';
 import 'create_pdf.dart';
+import 'pages/saved_files_page.dart';
+import 'services/local_storage_manager.dart';
 
 class DeafPage extends StatefulWidget {
   const DeafPage({super.key});
@@ -276,8 +278,8 @@ class _DeafPageState extends State<DeafPage>
       debugPrint('🛑 تم إيقاف الاستماع. تمت معالجة $_segmentCount مقاطع');
       _showSuccessSnackbar('تم إيقاف الاستماع');
 
-      // ✅ توليد PDF تلقائيًا بعد الإيقاف (بدون مشاركة)
-      await createTranscriptionPdf(context, _transcriptionHistory, autoDownload: true);
+      // ✅ توليد PDF تلقائيًا بعد الإيقاف (حفظ سريع في مجلد التطبيق)
+      await createAndSaveTranscriptionPdfQuick(context, _transcriptionHistory);
     } catch (e) {
       debugPrint('❌ خطأ في إيقاف الاستماع: $e');
       _showErrorSnackbar('حدث خطأ أثناء الإيقاف');
@@ -815,22 +817,21 @@ class _DeafPageState extends State<DeafPage>
     );
   }
 
-  /// 📥 تحميل PDF مباشرة إلى الهاتف بدون مشاركة
-  Future<void> _downloadPdfDirectly() async {
+  /// 📥 إظهار خيارات حفظ PDF
+  Future<void> _showSaveOptions() async {
     if (_transcriptionHistory.isEmpty) {
       _showErrorSnackbar('لا يوجد نصوص لتحويلها إلى PDF');
       return;
     }
-    await createTranscriptionPdf(context, _transcriptionHistory, autoDownload: true);
+    await showSaveLocationDialog(context, _transcriptionHistory);
   }
 
-  /// 📤 مشاركة PDF 
-  Future<void> _sharePdf() async {
-    if (_transcriptionHistory.isEmpty) {
-      _showErrorSnackbar('لا يوجد نصوص لتحويلها إلى PDF');
-      return;
-    }
-    await createTranscriptionPdf(context, _transcriptionHistory, autoDownload: false);
+  /// 📂 فتح صفحة الملفات المحفوظة
+  void _openSavedFiles() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SavedFilesPage()),
+    );
   }
 
   /// 🗑️ إظهار تأكيد حذف النصوص
@@ -925,29 +926,31 @@ class _DeafPageState extends State<DeafPage>
         title: const Text('المحاضر الذكي'),
         backgroundColor: micColor.withOpacity(0.1),
         leading: PopupMenuButton<String>(
-          icon: const Icon(Icons.download, size: 28),
-          tooltip: 'تحميل PDF',
+          icon: const Icon(Icons.save_alt, size: 28),
+          tooltip: 'خيارات الحفظ والملفات',
           onSelected: (String result) async {
-            if (result == 'download') {
-              await _downloadPdfDirectly();
-            } else if (result == 'share') {
-              await _sharePdf();
+            if (result == 'save') {
+              await _showSaveOptions();
+            } else if (result == 'files') {
+              _openSavedFiles();
             }
           },
           itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
             const PopupMenuItem<String>(
-              value: 'download',
+              value: 'save',
               child: ListTile(
-                leading: Icon(Icons.download, color: Colors.blue),
-                title: Text('تحميل الملف', textDirection: TextDirection.rtl),
+                leading: Icon(Icons.save, color: Colors.blue),
+                title: Text('حفظ PDF', textDirection: TextDirection.rtl),
+                subtitle: Text('اختيار مكان الحفظ', textDirection: TextDirection.rtl, style: TextStyle(fontSize: 11)),
                 contentPadding: EdgeInsets.zero,
               ),
             ),
             const PopupMenuItem<String>(
-              value: 'share',
+              value: 'files',
               child: ListTile(
-                leading: Icon(Icons.share, color: Colors.green),
-                title: Text('مشاركة', textDirection: TextDirection.rtl),
+                leading: Icon(Icons.folder, color: Colors.green),
+                title: Text('الملفات المحفوظة', textDirection: TextDirection.rtl),
+                subtitle: Text('عرض وإدارة الملفات', textDirection: TextDirection.rtl, style: TextStyle(fontSize: 11)),
                 contentPadding: EdgeInsets.zero,
               ),
             ),
