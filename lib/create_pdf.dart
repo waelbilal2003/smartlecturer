@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data'; // ⬅️ مطلوب لـ Uint8List
 import 'package:flutter/material.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
@@ -30,7 +31,8 @@ Future<SavedFileResult?> createTranscriptionPdf(
     // ✅ طلب الأذونات المناسبة لإصدار Android (فقط للحفظ الخارجي)
     if (saveLocation != SaveLocation.appDocuments) {
       if (!await PermissionHelper.requestStoragePermissions(context)) {
-        _showSnackbar(context, 'يجب منح إذن الوصول إلى التخزين للحفظ في هذا الموقع',
+        _showSnackbar(
+            context, 'يجب منح إذن الوصول إلى التخزين للحفظ في هذا الموقع',
             isError: true);
         return null;
       }
@@ -92,19 +94,15 @@ Future<SavedFileResult?> createTranscriptionPdf(
                     pw.Text(
                       "⏱️ $timestamp",
                       style: pw.TextStyle(
-                          fontSize: 10, 
-                          color: PdfColors.grey600, 
-                          font: arabicFont
-                      ),
+                          fontSize: 10,
+                          color: PdfColors.grey600,
+                          font: arabicFont),
                       textDirection: pw.TextDirection.rtl,
                     ),
                   pw.Text(
                     text,
                     style: pw.TextStyle(
-                        fontSize: 14, 
-                        height: 1.5, 
-                        font: arabicFont
-                    ),
+                        fontSize: 14, height: 1.5, font: arabicFont),
                     textDirection: pw.TextDirection.rtl,
                   ),
                   pw.Divider(thickness: 0.3),
@@ -117,19 +115,22 @@ Future<SavedFileResult?> createTranscriptionPdf(
     );
 
     // 🔹 حفظ الملف باستخدام مدير التخزين المحلي المحسن
-    final pdfBytes = await pdf.save();
+    final Uint8List pdfBytes = await pdf.save(); // ✅ تحديد النوع صراحةً
+
     final result = await LocalStorageManager.savePdfFile(
       pdfBytes: pdfBytes,
       fileName: 'تقرير_الجلسة_الصوتية',
-      description: 'تقرير يحتوي على ${transcriptionHistory.length} نص محول من الصوت - $formattedDate',
+      description:
+          'تقرير يحتوي على ${transcriptionHistory.length} نص محول من الصوت - $formattedDate',
       saveLocation: saveLocation,
     );
 
     if (result.success) {
       _showSnackbar(context, result.message);
-      
+
       // ✅ إعلام نظام أندرويد بأن هناك ملفًا جديدًا (للحفظ الخارجي فقط)
-      if (saveLocation != SaveLocation.appDocuments && result.filePath != null) {
+      if (saveLocation != SaveLocation.appDocuments &&
+          result.filePath != null) {
         try {
           const platform = MethodChannel('media_scanner');
           await platform.invokeMethod('scanFile', {'path': result.filePath});
@@ -143,7 +144,7 @@ Future<SavedFileResult?> createTranscriptionPdf(
       if (showShareDialog) {
         await _showFileActionsDialog(context, result, pdfBytes);
       }
-      
+
       return result;
     } else {
       _showSnackbar(context, result.message, isError: true);
@@ -151,7 +152,8 @@ Future<SavedFileResult?> createTranscriptionPdf(
     }
   } catch (e) {
     debugPrint('❌ خطأ أثناء إنشاء PDF: $e');
-    _showSnackbar(context, 'حدث خطأ أثناء إنشاء ملف PDF: ${e.toString()}', isError: true);
+    _showSnackbar(context, 'حدث خطأ أثناء إنشاء ملف PDF: ${e.toString()}',
+        isError: true);
     return null;
   }
 }
@@ -169,11 +171,9 @@ void _showSnackbar(BuildContext context, String message,
 }
 
 /// 🔸 عرض حوار خيارات الملف بعد الحفظ
-Future<void> _showFileActionsDialog(
-  BuildContext context, 
-  SavedFileResult result, 
-  List<int> pdfBytes
-) async {
+Future<void> _showFileActionsDialog(BuildContext context,
+    SavedFileResult result, Uint8List pdfBytes // ✅ تم تغيير النوع إلى Uint8List
+    ) async {
   return showDialog<void>(
     context: context,
     builder: (BuildContext context) {
@@ -215,9 +215,12 @@ Future<void> _showFileActionsDialog(
             onPressed: () async {
               Navigator.of(context).pop();
               if (result.fileInfo != null) {
-                final opened = await LocalStorageManager.openSavedFile(result.fileInfo!);
+                final opened =
+                    await LocalStorageManager.openSavedFile(result.fileInfo!);
                 if (!opened && context.mounted) {
-                  _showSnackbar(context, 'لا يمكن فتح الملف. تأكد من وجود تطبيق لقراءة PDF', isError: true);
+                  _showSnackbar(context,
+                      'لا يمكن فتح الملف. تأكد من وجود تطبيق لقراءة PDF',
+                      isError: true);
                 }
               }
             },
@@ -229,12 +232,13 @@ Future<void> _showFileActionsDialog(
               Navigator.of(context).pop();
               try {
                 await Printing.sharePdf(
-                  bytes: pdfBytes,
+                  bytes: pdfBytes, // ✅ الآن من نوع Uint8List
                   filename: result.fileName ?? "تقرير_صوتي.pdf",
                 );
               } catch (e) {
                 if (context.mounted) {
-                  _showSnackbar(context, 'خطأ في مشاركة الملف: $e', isError: true);
+                  _showSnackbar(context, 'خطأ في مشاركة الملف: $e',
+                      isError: true);
                 }
               }
             },
